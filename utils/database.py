@@ -35,6 +35,7 @@ class AIAnalysis(Base):
     model_used = Column(String(100))
     resume_score = Column(Integer)
     job_role = Column(String(100))
+    full_analysis = Column(Text)  # Added to store the full markdown analysis
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class DatabaseManager:
@@ -117,7 +118,8 @@ def save_ai_analysis_data(resume_id, analysis_data):
             resume_id=resume_id,
             model_used=analysis_data.get('model_used', 'Unknown'),
             resume_score=analysis_data.get('resume_score', 0),
-            job_role=analysis_data.get('job_role', 'Unknown')
+            job_role=analysis_data.get('job_role', 'Unknown'),
+            full_analysis=analysis_data.get('analysis', '')  # Save full analysis text
         )
         
         session.add(ai_analysis)
@@ -126,6 +128,30 @@ def save_ai_analysis_data(resume_id, analysis_data):
     except Exception as e:
         session.rollback()
         raise e
+    finally:
+        session.close()
+
+def get_all_ai_analyses():
+    """Get all AI analyses ordered by date (newest first)"""
+    session = get_database_connection()
+    try:
+        analyses = session.query(AIAnalysis).order_by(AIAnalysis.created_at.desc()).all()
+        return analyses
+    except Exception as e:
+        print(f"Error getting all analyses: {e}")
+        return []
+    finally:
+        session.close()
+
+def get_ai_analysis(analysis_id):
+    """Get a specific AI analysis by ID"""
+    session = get_database_connection()
+    try:
+        analysis = session.query(AIAnalysis).filter(AIAnalysis.id == analysis_id).first()
+        return analysis
+    except Exception as e:
+        print(f"Error getting analysis {analysis_id}: {e}")
+        return None
     finally:
         session.close()
 

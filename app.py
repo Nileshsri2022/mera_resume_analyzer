@@ -27,7 +27,8 @@ from config.database import (
     init_database, verify_admin, log_admin_action, save_ai_analysis_data,
     get_ai_analysis_stats, reset_ai_analysis_stats, get_detailed_ai_analysis_stats,
     save_ai_course_recommendations, get_ai_course_recommendations,
-    save_ai_video_recommendations, get_ai_video_recommendations
+    save_ai_video_recommendations, get_ai_video_recommendations,
+    get_all_ai_analyses, get_ai_analysis
 )
 from utils.ai_resume_analyzer import AIResumeAnalyzer
 from utils.resume_builder import ResumeBuilder
@@ -87,6 +88,7 @@ class ResumeApp:
             "📊 DASHBOARD": self.render_dashboard,
             "🎯 JOB SEARCH": self.render_job_search,
             "💬 FEEDBACK": self.render_feedback_page,
+            "📜 HISTORY": self.render_history,
             "ℹ️ ABOUT": self.render_about
         }
 
@@ -2013,6 +2015,11 @@ class ResumeApp:
                         # Add AI Analyzer Stats in an expander
             with st.expander("📊 AI Analyzer Statistics", expanded=False):
                 try:
+                    import pandas as pd
+                    import plotly.express as px
+                    import plotly.graph_objects as go
+                    import numpy as np
+                    
                     # Add a reset button for admin users
                     if st.session_state.get('is_admin', False):
                         if st.button(
@@ -2732,7 +2739,8 @@ class ResumeApp:
                                         {
                                             "model_used": selected_model,
                                             "resume_score": resume_score,
-                                            "job_role": job_role
+                                            "job_role": job_role,
+                                            "analysis": analysis_result.get("analysis", "")
                                         }
                                     )
 
@@ -3329,6 +3337,101 @@ class ResumeApp:
             
         with stats_tab:
             feedback_manager.render_feedback_stats()
+
+    def render_history(self):
+        """Render the history page"""
+        st.markdown("## 📜 Analysis History")
+        st.markdown("View and compare your past resume analyses.")
+        
+        analyses = get_all_ai_analyses()
+        
+        if not analyses:
+            st.info("No analysis history found. Run an AI analysis to see it here!")
+            return
+            
+        # Comparison Mode Toggle
+        col1, col2 = st.columns([3, 1])
+        with col2:
+            compare_mode = st.checkbox("Enable Comparison Mode")
+            
+        if compare_mode:
+            st.warning("Select exactly two analyses to compare.")
+            
+            # Create a dataframe for selection
+            df_data = []
+            for a in analyses:
+                df_data.append({
+                    "Select": False,
+                    "ID": a['id'],
+                    "Date": a['created_at'],
+                    "Role": a['job_role'],
+                    "Score": a['resume_score'],
+                    "Model": a['model_used']
+                })
+            
+            df = pd.DataFrame(df_data)
+            
+            # Use data editor for selection
+            edited_df = st.data_editor(
+                df,
+                column_config={
+                    "Select": st.column_config.CheckboxColumn(
+                        "Compare",
+                        help="Select exactly 2 to compare",
+                        default=False,
+                    )
+                },
+                disabled=["ID", "Date", "Role", "Score", "Model"],
+                hide_index=True,
+            )
+            
+            selected_rows = edited_df[edited_df["Select"]]
+            
+            if len(selected_rows) == 2:
+                st.divider()
+                st.subheader("⚔️ Comparison View")
+                
+                id1 = selected_rows.iloc[0]["ID"]
+                id2 = selected_rows.iloc[1]["ID"]
+                
+                a1 = get_ai_analysis(int(id1))
+                a2 = get_ai_analysis(int(id2))
+                
+                c1, c2 = st.columns(2)
+                
+                with c1:
+                    st.markdown(f"### Version A ({a1['created_at']})")
+                    st.metric("Score", f"{a1['resume_score']}/100")
+                    st.markdown(f"**Role:** {a1['job_role']}")
+                    with st.expander("View Full Analysis"):
+                        st.markdown(a1['full_analysis'] if a1.get('full_analysis') else "No analysis text available")
+                        
+                with c2:
+                    st.markdown(f"### Version B ({a2['created_at']})")
+                    delta = a2['resume_score'] - a1['resume_score']
+                    st.metric("Score", f"{a2['resume_score']}/100", delta=delta)
+                    st.markdown(f"**Role:** {a2['job_role']}")
+                    with st.expander("View Full Analysis"):
+                        st.markdown(a2['full_analysis'] if a2.get('full_analysis') else "No analysis text available")
+                        
+            elif len(selected_rows) > 2:
+                st.error("Please select only two analyses to compare.")
+                
+        else:
+            # List View
+            for analysis in analyses:
+                with st.expander(f"{analysis['created_at']} - {analysis['job_role']} (Score: {analysis['resume_score']})"):
+                    st.markdown(f"**Model Used:** {analysis['model_used']}")
+                    st.markdown(f"**Job Role:** {analysis['job_role']}")
+                    st.progress(analysis['resume_score'] / 100, text=f"Resume Score: {analysis['resume_score']}/100")
+                    
+                    if analysis.get('full_analysis'):
+                        st.markdown("---")
+                        st.markdown(analysis['full_analysis'])
+                    else:
+                        st.warning("Full analysis text not available for this entry.")
+
+
 
 
 

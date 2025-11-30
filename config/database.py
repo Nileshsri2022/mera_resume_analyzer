@@ -114,6 +114,30 @@ def init_database():
     )
     ''')
 
+    # Create ai_analysis table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS ai_analysis (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        resume_id INTEGER,
+        model_used TEXT,
+        resume_score INTEGER,
+        job_role TEXT,
+        full_analysis TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (resume_id) REFERENCES resume_data (id)
+    )
+    ''')
+
+    # Migration: Check if full_analysis column exists in ai_analysis, if not add it
+    try:
+        cursor.execute("PRAGMA table_info(ai_analysis)")
+        columns = [info[1] for info in cursor.fetchall()]
+        if 'full_analysis' not in columns:
+            cursor.execute("ALTER TABLE ai_analysis ADD COLUMN full_analysis TEXT")
+            print("Added full_analysis column to ai_analysis table")
+    except Exception as e:
+        print(f"Error checking/migrating ai_analysis table: {e}")
+
     conn.commit()
     conn.close()
 
@@ -337,16 +361,27 @@ def save_ai_analysis_data(resume_id, analysis_data):
             )
         """)
         
+        # Check if full_analysis column exists, if not add it
+        cursor.execute("PRAGMA table_info(ai_analysis)")
+        columns = [info[1] for info in cursor.fetchall()]
+        if 'full_analysis' not in columns:
+            try:
+                cursor.execute("ALTER TABLE ai_analysis ADD COLUMN full_analysis TEXT")
+                conn.commit()
+            except Exception as e:
+                print(f"Error adding full_analysis column: {e}")
+
         # Insert the analysis data
         cursor.execute("""
             INSERT INTO ai_analysis (
-                resume_id, model_used, resume_score, job_role
-            ) VALUES (?, ?, ?, ?)
+                resume_id, model_used, resume_score, job_role, full_analysis
+            ) VALUES (?, ?, ?, ?, ?)
         """, (
             resume_id,
             analysis_data.get('model_used', ''),
             analysis_data.get('resume_score', 0),
-            analysis_data.get('job_role', '')
+            analysis_data.get('job_role', ''),
+            analysis_data.get('analysis', '')
         ))
         
         conn.commit()
@@ -355,6 +390,67 @@ def save_ai_analysis_data(resume_id, analysis_data):
         print(f"Error saving AI analysis data: {e}")
         conn.rollback()
         raise
+    finally:
+        conn.close()
+
+def get_all_ai_analyses():
+    """Get all AI analyses ordered by date (newest first)"""
+    conn = get_database_connection()
+    cursor = conn.cursor()
+    try:
+        # Check if table exists first
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_analysis'")
+        if not cursor.fetchone():
+            return []
+
+        cursor.execute("""
+            SELECT id, model_used, resume_score, job_role, created_at, full_analysis 
+            FROM ai_analysis 
+            ORDER BY created_at DESC
+        """)
+        
+        analyses = []
+        for row in cursor.fetchall():
+            analyses.append({
+                'id': row[0],
+                'model_used': row[1],
+                'resume_score': row[2],
+                'job_role': row[3],
+                'created_at': row[4],
+                'full_analysis': row[5] if len(row) > 5 else None
+            })
+        return analyses
+    except Exception as e:
+        print(f"Error getting all analyses: {e}")
+        return []
+    finally:
+        conn.close()
+
+def get_ai_analysis(analysis_id):
+    """Get a specific AI analysis by ID"""
+    conn = get_database_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT id, model_used, resume_score, job_role, created_at, full_analysis 
+            FROM ai_analysis 
+            WHERE id = ?
+        """, (analysis_id,))
+        
+        row = cursor.fetchone()
+        if row:
+            return {
+                'id': row[0],
+                'model_used': row[1],
+                'resume_score': row[2],
+                'job_role': row[3],
+                'created_at': row[4],
+                'full_analysis': row[5] if len(row) > 5 else None
+            }
+        return None
+    except Exception as e:
+        print(f"Error getting analysis {analysis_id}: {e}")
+        return None
     finally:
         conn.close()
 
