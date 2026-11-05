@@ -1,12 +1,9 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from config.database import get_database_connection
 import io
-import uuid
-from plotly.subplots import make_subplots
 from io import BytesIO
 
 class DashboardManager:

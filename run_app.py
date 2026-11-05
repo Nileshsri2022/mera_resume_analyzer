@@ -7,7 +7,6 @@ This script handles Chrome/chromedriver setup and starts the application
 import os
 import sys
 import subprocess
-import platform
 
 def main():
     """Main function to set up chromedriver and run the application"""

@@ -1,6 +1,5 @@
 import pypdf
 import docx
-import re
 from io import BytesIO
 
 class ResumeParser:

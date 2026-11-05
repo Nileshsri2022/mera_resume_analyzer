@@ -1,12 +1,8 @@
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.section import WD_SECTION
 from docx.enum.style import WD_STYLE_TYPE
-from docx.oxml import parse_xml
-from docx.oxml.ns import nsdecls
 from io import BytesIO
-import tempfile
 import traceback
 
 class ResumeBuilder:
