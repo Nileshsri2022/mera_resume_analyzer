@@ -47,36 +47,6 @@ def feature_card(icon, title, description):
         </div>
     """, unsafe_allow_html=True)
 
-def about_section(content, image_path=None, social_links=None):
-    """Render a modern about section with profile image and social links"""
-    st.markdown("""
-        <div class="glass-card about-section">
-            <div class="profile-section">
-    """, unsafe_allow_html=True)
-    
-    # Profile Image
-    if image_path:
-        st.image(image_path, use_column_width=False, width=200)
-    
-    # Image Upload
-    uploaded_file = st.file_uploader("Upload profile picture", type=['png', 'jpg', 'jpeg'])
-    if uploaded_file is not None:
-        st.image(uploaded_file, use_column_width=False, width=200)
-    
-    # Social Links
-    if social_links:
-        st.markdown('<div class="social-links">', unsafe_allow_html=True)
-        for platform, url in social_links.items():
-            st.markdown(f'<a href="{url}" target="_blank" class="social-link"><i class="fab fa-{platform.lower()}"></i></a>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # About Content
-    st.markdown(f"""
-            </div>
-            <div class="about-content">{content}</div>
-        </div>
-    """, unsafe_allow_html=True)
-
 def metric_card(label, value, delta=None, icon=None):
     """Render a modern metric card with animations"""
     icon_html = f'<i class="{icon}"></i>' if icon else ''
