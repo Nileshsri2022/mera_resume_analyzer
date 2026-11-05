@@ -797,9 +797,10 @@ class ResumeApp:
             </div>
         """
 
-    def analyze_resume(self, resume_text):
+    def analyze_resume(self, resume_bytes, options=None):
         """Analyze resume and store results"""
-        analytics = self.analyzer.analyze_resume(resume_text)
+        from utils.resume_analysis import analyze
+        analytics = analyze(resume_bytes, options)
         st.session_state.analytics_data = analytics
         return analytics
 
@@ -810,21 +811,27 @@ class ResumeApp:
 
         if uploaded_file is not None:
             try:
-                # Extract text from resume
-                if uploaded_file.type == "application/pdf":
-                    resume_text = extract_text_from_pdf(uploaded_file)
-                else:
-                    resume_text = extract_text_from_docx(uploaded_file)
+                # Analyze raw file bytes through the deep analysis core
+                options = {
+                    'filename': uploaded_file.name,
+                    'file_type': 'pdf' if uploaded_file.type == "application/pdf" else 'docx'
+                }
+                analytics = self.analyze_resume(uploaded_file.getvalue(), options)
+
+                if analytics.get('error'):
+                    st.error(analytics['error'])
+                    return False
 
                 # Store resume data
+                resume_text = analytics.get('raw_text', '')
+                if not resume_text:
+                    resume_text = uploaded_file.getvalue().decode("utf-8", errors="replace")
+
                 st.session_state.resume_data = {
                     'filename': uploaded_file.name,
                     'content': resume_text,
                     'upload_time': datetime.now().isoformat()
                 }
-
-                # Analyze resume
-                analytics = self.analyze_resume(resume_text)
 
                 return True
             except Exception as e:
@@ -1588,8 +1595,16 @@ class ResumeApp:
                             st.error(f"Error reading file: {str(e)}")
                             return
 
-                        # Analyze the document
-                        analysis = self.analyzer.analyze_resume({'raw_text': text}, role_info)
+                        # Analyze the document through the deep analysis core
+                        options = {
+                            'text': text,
+                            'filename': uploaded_file.name,
+                            'job_role': selected_role,
+                            'job_description': role_info.get('description', ''),
+                            'required_skills': role_info.get('required_skills', []),
+                            'require_gpa': role_info.get('require_gpa', False)
+                        }
+                        analysis = self.analyze_resume(uploaded_file.getvalue(), options)
                         
                         # Check if analysis returned an error
                         if 'error' in analysis:
