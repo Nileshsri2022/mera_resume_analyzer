@@ -1,12 +1,11 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
-import google.generativeai as genai
+from utils.ai_resume_analyzer_llm import create_adapter, LLMAPICallError
 import pdfplumber
 from pdf2image import convert_from_path
 import pytesseract
 import tempfile
-import requests
 import json
 import math
 import re
@@ -20,10 +19,7 @@ class AIResumeAnalyzer:
         # Configure Google Gemini AI
         self.google_api_key = os.getenv("GOOGLE_API_KEY")
         self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
-        
-        if self.google_api_key:
-            genai.configure(api_key=self.google_api_key)
-    
+
     def extract_text_from_pdf(self, pdf_file):
         """Extract text from PDF using pdfplumber and OCR if needed"""
         text = ""
@@ -190,8 +186,8 @@ class AIResumeAnalyzer:
             return {"error": "Google API key is not configured. Please add it to your .env file."}
         
         try:
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            
+            adapter = create_adapter("gemini", api_key=self.google_api_key)
+
             base_prompt = f"""
             You are an expert resume analyst with deep knowledge of industry standards, job requirements, and hiring practices across various fields. Your task is to provide a comprehensive, detailed analysis of the resume provided.
             
@@ -272,9 +268,8 @@ class AIResumeAnalyzer:
                 [List specific requirements from the job description that are not addressed in the resume, with recommendations on how to address each gap]
                 """
             
-            response = model.generate_content(base_prompt)
-            analysis = response.text.strip()
-            
+            analysis = adapter.complete(base_prompt).strip()
+
             # Extract resume score if present
             resume_score = self._extract_score_from_text(analysis)
             
@@ -380,32 +375,16 @@ class AIResumeAnalyzer:
                 [List specific requirements from the job description that are not addressed in the resume, with recommendations on how to address each gap]
                 """
             
-            # Call the API
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
-            
-            data = {
-                "model": model_name,
-                "messages": [
-                    {"role": "system", "content": "You are an expert resume analyst."},
-                    {"role": "user", "content": base_prompt}
-                ],
-                "temperature": 0.7
-            }
-            
-            # Handle trailing slash in base_url
-            api_url = f"{base_url.rstrip('/')}/chat/completions"
-            
-            response = requests.post(api_url, headers=headers, json=data)
-            
-            if response.status_code != 200:
-                return {"error": f"API Error: {response.status_code} - {response.text}"}
-                
-            result = response.json()
-            analysis = result['choices'][0]['message']['content']
-            
+            adapter = create_adapter(
+                "openai_compatible",
+                base_url=base_url,
+                api_key=api_key,
+                model_name=model_name,
+            )
+            analysis = adapter.complete(
+                base_prompt, system="You are an expert resume analyst."
+            )
+
             # Extract scores
             resume_score = self._extract_score_from_text(analysis)
             ats_score = self._extract_ats_score_from_text(analysis)
@@ -417,6 +396,8 @@ class AIResumeAnalyzer:
                 "model_used": model_name
             }
             
+        except LLMAPICallError as e:
+            return {"error": str(e)}
         except Exception as e:
             return {"error": f"Analysis failed: {str(e)}"}
 
@@ -450,38 +431,22 @@ class AIResumeAnalyzer:
             """
 
             if model_name == "Google Gemini":
-                # Use Gemini
-                model = genai.GenerativeModel('gemini-2.0-flash')
-                response = model.generate_content(prompt)
-                return response.text
+                return create_adapter("gemini", api_key=self.google_api_key).complete(prompt)
             else:
                 # Use OpenAI Compatible
                 if not base_url or not api_key:
                     return "Error: Base URL and API Key are required for OpenAI compatible models."
-                
-                headers = {
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                }
-                
-                data = {
-                    "model": model_name,
-                    "messages": [
-                        {"role": "system", "content": "You are an expert resume writer."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    "temperature": 0.7
-                }
-                
-                api_url = f"{base_url.rstrip('/')}/chat/completions"
-                response = requests.post(api_url, headers=headers, json=data)
-                
-                if response.status_code != 200:
-                    return f"API Error: {response.status_code} - {response.text}"
-                    
-                result = response.json()
-                return result['choices'][0]['message']['content']
 
+                adapter = create_adapter(
+                    "openai_compatible",
+                    base_url=base_url,
+                    api_key=api_key,
+                    model_name=model_name,
+                )
+                return adapter.complete(prompt, system="You are an expert resume writer.")
+
+        except LLMAPICallError as e:
+            return str(e)
         except Exception as e:
             return f"Error tailoring resume: {str(e)}"
 
