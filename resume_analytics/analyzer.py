@@ -1,5 +1,4 @@
 import spacy
-from collections import Counter
 from datetime import datetime
 
 class ResumeAnalyzer:

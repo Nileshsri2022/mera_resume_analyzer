@@ -2,13 +2,9 @@ import streamlit as st
 from typing import List, Dict
 from .job_portals import JobPortal
 from .suggestions import (
-    JOB_SUGGESTIONS, 
-    LOCATION_SUGGESTIONS, 
-    EXPERIENCE_RANGES,
-    SALARY_RANGES,
-    JOB_TYPES,
-    get_cities_by_state,
-    get_all_states
+    JOB_SUGGESTIONS,
+    LOCATION_SUGGESTIONS,
+    get_cities_by_state
 )
 from .companies import get_featured_companies, get_market_insights
 from .linkedin_scraper import render_linkedin_scraper

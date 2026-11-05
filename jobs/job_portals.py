@@ -1,5 +1,4 @@
 """Module for handling job portal integrations"""
-import urllib.parse
 from typing import Dict, List
 from .suggestions import LOCATION_SUGGESTIONS, get_cities_by_state
 

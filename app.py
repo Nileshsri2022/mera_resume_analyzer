@@ -2,18 +2,13 @@
 Smart Resume AI - Main Application
 """
 import time
-from PIL import Image
 from jobs.job_search import render_job_search
 from datetime import datetime
 from ui_components import (
-    apply_modern_styles, hero_section, feature_card, about_section,
-    page_header, render_analytics_section, render_activity_section,
-    render_suggestions_section
+    apply_modern_styles, hero_section, feature_card,
+    page_header
 )
 from feedback.feedback import FeedbackManager
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Inches, Pt
-from docx import Document
 import io
 import base64
 import plotly.graph_objects as go
@@ -25,9 +20,9 @@ from config.job_roles import JOB_ROLES
 from config.database import (
     get_database_connection, save_resume_data, save_analysis_data,
     init_database, verify_admin, log_admin_action, save_ai_analysis_data,
-    get_ai_analysis_stats, reset_ai_analysis_stats, get_detailed_ai_analysis_stats,
+    reset_ai_analysis_stats, get_detailed_ai_analysis_stats,
     save_ai_course_recommendations, get_ai_course_recommendations,
-    save_ai_video_recommendations, get_ai_video_recommendations,
+    get_ai_video_recommendations,
     get_all_ai_analyses, get_ai_analysis
 )
 from utils.ai_resume_analyzer import AIResumeAnalyzer

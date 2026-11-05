@@ -2,7 +2,6 @@
 import os
 import sys
 import platform
-import tempfile
 import subprocess
 import streamlit as st
 from selenium import webdriver
@@ -12,7 +11,6 @@ from selenium.webdriver.chrome.options import Options
 # Try to import various webdriver managers with fallbacks
 try:
     from webdriver_manager.chrome import ChromeDriverManager
-    from webdriver_manager.core.utils import ChromeType
     webdriver_manager_available = True
 except ImportError:
     webdriver_manager_available = False

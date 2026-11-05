@@ -208,6 +208,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
+## 📚 Additional Resources
+
+*   **[HR Interview Questions Guide](hr-interview-questions.md)**: Comprehensive guide with common HR interview questions and sample answers to help you prepare for job interviews.
+*   **[Dependencies Explanation](DEPENDENCIES.md)**: Detailed breakdown of all project dependencies, their purposes, and installation requirements.
+
 ## 🙏 Acknowledgments
 
 *   Built with [Streamlit](https://streamlit.io/)

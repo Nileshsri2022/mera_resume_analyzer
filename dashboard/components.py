@@ -1,8 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 
 class DashboardComponents:
     def __init__(self, colors):
